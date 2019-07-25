@@ -22,7 +22,7 @@ from pymatgen.io.vasp.sets import MPRelaxSet, MITMDSet, MITRelaxSet, \
 from atomate.common.firetasks.glue_tasks import PassCalcLocs
 from atomate.vasp.firetasks.glue_tasks import CopyVaspOutputs, pass_vasp_result
 from atomate.vasp.firetasks.neb_tasks import TransferNEBTask
-from atomate.vasp.firetasks.parse_outputs import VaspToDb, BoltztrapToDb
+from atomate.vasp.firetasks.parse_outputs import VaspToDb, BoltztrapToDb, Vasp2TraceDB
 from atomate.vasp.firetasks.run_calc import RunVaspCustodian, RunBoltztrap, RunVasp2Trace
 from atomate.vasp.firetasks.write_inputs import WriteNormalmodeDisplacedPoscar, \
     WriteTransmutedStructureIOSet, WriteVaspFromIOSet, WriteVaspHSEBSFromPrev, \
