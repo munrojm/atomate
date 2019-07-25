@@ -12,5 +12,5 @@ fireworks:
     parents: 1
     mode: line
 - fw: atomate.vasp.fireworks.core.Vasp2TraceFW
-  params"
+  params:
     parents: 3
