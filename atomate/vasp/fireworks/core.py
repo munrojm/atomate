@@ -23,7 +23,7 @@ from atomate.common.firetasks.glue_tasks import PassCalcLocs
 from atomate.vasp.firetasks.glue_tasks import CopyVaspOutputs, pass_vasp_result
 from atomate.vasp.firetasks.neb_tasks import TransferNEBTask
 from atomate.vasp.firetasks.parse_outputs import VaspToDb, BoltztrapToDb
-from atomate.vasp.firetasks.run_calc import RunVaspCustodian, RunBoltztrap
+from atomate.vasp.firetasks.run_calc import RunVaspCustodian, RunBoltztrap, RunVasp2Trace
 from atomate.vasp.firetasks.write_inputs import WriteNormalmodeDisplacedPoscar, \
     WriteTransmutedStructureIOSet, WriteVaspFromIOSet, WriteVaspHSEBSFromPrev, \
     WriteVaspNSCFFromPrev, WriteVaspSOCFromPrev, WriteVaspStaticFromPrev, \
@@ -120,16 +120,20 @@ class StaticFW(Firework):
             vasptodb_kwargs["additional_fields"] = {}
         vasptodb_kwargs["additional_fields"]["task_label"] = name
 
-        fw_name = "{}-{}".format(structure.composition.reduced_formula if structure else "unknown", name)
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
 
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, contcar_to_poscar=True))
-            t.append(WriteVaspStaticFromPrev(other_params=vasp_input_set_params))
+            t.append(CopyVaspOutputs(
+                calc_dir=prev_calc_dir, contcar_to_poscar=True))
+            t.append(WriteVaspStaticFromPrev(
+                other_params=vasp_input_set_params))
         elif parents:
             if prev_calc_loc:
                 t.append(CopyVaspOutputs(calc_loc=prev_calc_loc,
                                          contcar_to_poscar=True))
-            t.append(WriteVaspStaticFromPrev(other_params=vasp_input_set_params))
+            t.append(WriteVaspStaticFromPrev(
+                other_params=vasp_input_set_params))
         elif structure:
             vasp_input_set = vasp_input_set or MPStaticSet(structure)
             t.append(WriteVaspFromIOSet(structure=structure,
@@ -142,7 +146,8 @@ class StaticFW(Firework):
         t.append(PassCalcLocs(name=name))
         t.append(
             VaspToDb(db_file=db_file, **vasptodb_kwargs))
-        super(StaticFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
+        super(StaticFW, self).__init__(
+            t, parents=parents, name=fw_name, **kwargs)
 
 
 class StaticInterpolateFW(Firework):
@@ -182,7 +187,8 @@ class StaticInterpolateFW(Firework):
 
         t.append(RunVaspCustodian(vasp_cmd=vasp_cmd, auto_npar=">>auto_npar<<"))
         t.append(PassCalcLocs(name=name))
-        t.append(VaspToDb(db_file=db_file, additional_fields={"task_label": name}))
+        t.append(VaspToDb(db_file=db_file,
+                          additional_fields={"task_label": name}))
 
         super(StaticInterpolateFW, self).__init__(t, parents=parents, name="{}-{}".format(
             structure.composition.reduced_formula, name), **kwargs)
@@ -212,13 +218,16 @@ class HSEBSFW(Firework):
         """
         name = name if name else "{} {}".format("hse", mode)
 
-        fw_name = "{}-{}".format(structure.composition.reduced_formula if structure else "unknown", name)
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
 
         t = []
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, additional_files=["CHGCAR"]))
+            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir,
+                                     additional_files=["CHGCAR"]))
         elif parents:
-            t.append(CopyVaspOutputs(calc_loc=True, additional_files=["CHGCAR"]))
+            t.append(CopyVaspOutputs(calc_loc=True,
+                                     additional_files=["CHGCAR"]))
         else:
             raise ValueError("Must specify a previous calculation for HSEBSFW")
 
@@ -233,7 +242,8 @@ class HSEBSFW(Firework):
             VaspToDb(db_file=db_file, additional_fields={"task_label": name},
                      parse_dos=parse_dos,
                      bandstructure_mode=bandstructure_mode))
-        super(HSEBSFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
+        super(HSEBSFW, self).__init__(
+            t, parents=parents, name=fw_name, **kwargs)
 
 
 class NonSCFFW(Firework):
@@ -408,13 +418,15 @@ class DFPTFW(Firework):
         """
         name = "static dielectric" if lepsilon else "phonon"
 
-        fw_name = "{}-{}".format(structure.composition.reduced_formula if structure else "unknown", name)
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
 
         user_incar_settings = user_incar_settings or {}
         t = []
 
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, contcar_to_poscar=True))
+            t.append(CopyVaspOutputs(
+                calc_dir=prev_calc_dir, contcar_to_poscar=True))
             t.append(WriteVaspStaticFromPrev(lepsilon=lepsilon, other_params={
                 'user_incar_settings': user_incar_settings, 'force_gamma': True}))
         elif parents and copy_vasp_outputs:
@@ -439,9 +451,11 @@ class DFPTFW(Firework):
                                       mod_spec_key="normalmodes"))
 
         t.append(PassCalcLocs(name=name))
-        t.append(VaspToDb(db_file=db_file, additional_fields={"task_label": name}))
+        t.append(VaspToDb(db_file=db_file,
+                          additional_fields={"task_label": name}))
 
-        super(DFPTFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
+        super(DFPTFW, self).__init__(
+            t, parents=parents, name=fw_name, **kwargs)
 
 
 class RamanFW(Firework):
@@ -468,14 +482,16 @@ class RamanFW(Firework):
             \*\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
         name = "{}_{}_{}".format(name, str(mode), str(displacement))
-        fw_name = "{}-{}".format(structure.composition.reduced_formula if structure else "unknown", name)
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
 
         user_incar_settings = user_incar_settings or {}
 
         t = []
 
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, contcar_to_poscar=True))
+            t.append(CopyVaspOutputs(
+                calc_dir=prev_calc_dir, contcar_to_poscar=True))
         elif parents:
             t.append(CopyVaspOutputs(calc_loc=True, contcar_to_poscar=True))
         else:
@@ -502,7 +518,8 @@ class RamanFW(Firework):
         t.append(
             VaspToDb(db_file=db_file, additional_fields={"task_label": name}))
 
-        super(RamanFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
+        super(RamanFW, self).__init__(
+            t, parents=parents, name=fw_name, **kwargs)
 
 
 class SOCFW(Firework):
@@ -527,11 +544,13 @@ class SOCFW(Firework):
                 FW or list of FWS.
             \*\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
-        fw_name = "{}-{}".format(structure.composition.reduced_formula if structure else "unknown", name)
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
 
         t = []
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, additional_files=["CHGCAR"], contcar_to_poscar=True))
+            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir,
+                                     additional_files=["CHGCAR"], contcar_to_poscar=True))
             t.append(WriteVaspSOCFromPrev(prev_calc_dir=".", magmom=magmom,
                                           saxis=saxis))
         elif parents and copy_vasp_outputs:
@@ -592,7 +611,8 @@ class TransmuterFW(Firework):
                                                        **override_default_vasp_params)
 
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, contcar_to_poscar=True))
+            t.append(CopyVaspOutputs(
+                calc_dir=prev_calc_dir, contcar_to_poscar=True))
             t.append(
                 WriteTransmutedStructureIOSet(transformations=transformations,
                                               transformation_params=transformation_params,
@@ -713,24 +733,28 @@ class BoltztrapFW(Firework):
             additional_fields (dict): fields added to the document such as user-defined tags or name, ids, etc
             \*\*kwargs: Other kwargs that are passed to Firework.__init__.
         """
-        fw_name = "{}-{}".format(structure.composition.reduced_formula if structure else "unknown", name)
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
 
         additional_fields = additional_fields or {}
 
         t = []
 
         if prev_calc_dir:
-            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, contcar_to_poscar=True))
+            t.append(CopyVaspOutputs(
+                calc_dir=prev_calc_dir, contcar_to_poscar=True))
         elif parents:
             t.append(CopyVaspOutputs(calc_loc=True, contcar_to_poscar=True))
         else:
             raise ValueError("Must specify structure or previous calculation")
 
         t.extend([RunBoltztrap(scissor=scissor, soc=soc, doping=doping, tmax=tmax, tgrid=tgrid),
-                  BoltztrapToDb(db_file=db_file, additional_fields=additional_fields),
+                  BoltztrapToDb(db_file=db_file,
+                                additional_fields=additional_fields),
                   PassCalcLocs(name=name)])
 
-        super(BoltztrapFW, self).__init__(t, parents=parents, name=fw_name, **kwargs)
+        super(BoltztrapFW, self).__init__(
+            t, parents=parents, name=fw_name, **kwargs)
 
 
 class NEBRelaxationFW(Firework):
@@ -858,3 +882,41 @@ class NEBFW(Firework):
                  PassCalcLocs(name=label)]
 
         super(NEBFW, self).__init__(tasks, spec=spec, name=label, **kwargs)
+
+
+class Vasp2TraceFW(Firework):
+ 
+    def __init__(self, parents=None, structure=None, name="vasp2trace", db_file=None,
+                 prev_calc_dir=None, vasp2trace_out = None, **kwargs):
+        """
+        Run Vasp2Trace and parse the output data. Assumes you have a previous FW with the 
+        calc_locs passed into the current FW.
+
+        Args:
+            structure (Structure): - only used for setting name of FW
+            name (str): name of this FW
+            db_file (str): path to the db file
+            parents (Firework): Parents of this particular Firework. FW or list of FWS.
+            prev_calc_dir (str): Path to a previous calculation to copy from
+            \*\*kwargs: Other kwargs that are passed to Firework.__init__.
+        """ 
+        fw_name = "{}-{}".format(
+            structure.composition.reduced_formula if structure else "unknown", name)
+
+        t = []
+
+        if prev_calc_dir:
+            t.append(CopyVaspOutputs(calc_dir=prev_calc_dir, additional_files=["CHGCAR", "WAVECAR"],
+                                     contcar_to_poscar=True))
+        elif parents:
+            t.append(CopyVaspOutputs(calc_loc=True, additional_files=["CHGCAR", "WAVECAR"],
+                                     contcar_to_poscar=True))
+        else:
+            raise ValueError("Must specify structure or previous calculation")
+
+        t.extend([RunVasp2Trace(),
+                  Vasp2TraceToDb(db_file=db_file, vasp2trace_out=vasp2trace_out),
+                  PassCalcLocs(name=name)])
+
+        super(Vasp2TraceFW, self).__init__(
+            t, parents=parents, name=fw_name, **kwargs)

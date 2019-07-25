@@ -1140,6 +1140,35 @@ class PolarizationToDb(FiretaskBase):
         coll = vaspdb.db["polarization_tasks"]
         coll.insert_one(polarization_dict)
 
+@explicit_serialize
+class Vasp2TraceToDb(FiretaskBase):
+    """
+    Stores data from traces.txt that is output by vasp2trace.
+
+    optional_params:
+        db_file (str): path to the db file
+    """
+
+    required_params = ["vasp2trace_out"]
+    optional_params = ["db_file"]
+
+    def run_task(self, fw_spec):
+        
+
+        d = self["vasp2trace_out"] or fw_action["vasp2trace_out"]
+
+        # store the results
+        db_file = env_chk(self.get("db_file"), fw_spec)
+        if not db_file:
+            with open("vasp2trace.json", "w") as f:
+                f.write(json.dumps(d, default=DATETIME_HANDLER))
+        else:
+            db = VaspCalcDb.from_db_file(db_file, admin=True)
+            db.collection = db.db["vasp2trace"]
+            db.collection.insert_one(d)
+            logger.info("Vasp2trace calculation complete.")
+        return FWAction()
+
 
 # the following definitions for backward compatibility
 class VaspToDbTask(VaspToDb):

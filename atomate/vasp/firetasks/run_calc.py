@@ -20,6 +20,7 @@ import subprocess
 from pymatgen.io.vasp import Incar, Kpoints, Poscar, Potcar
 from pymatgen.io.vasp.sets import get_vasprun_outcar
 from pymatgen.electronic_structure.boltztrap import BoltztrapRunner
+from pymatgen.command_line.vasp2trace_caller import Vasp2TraceCaller
 
 from custodian import Custodian
 from custodian.vasp.handlers import VaspErrorHandler, AliasingErrorHandler, \
@@ -61,7 +62,8 @@ class RunVaspDirect(FiretaskBase):
 
         logger.info("Running command: {}".format(cmd))
         return_code = subprocess.call(cmd, shell=True)
-        logger.info("Command {} finished running with returncode: {}".format(cmd, return_code))
+        logger.info(
+            "Command {} finished running with returncode: {}".format(cmd, return_code))
 
 
 @explicit_serialize
@@ -95,22 +97,22 @@ class RunVaspCustodian(FiretaskBase):
     required_params = ["vasp_cmd"]
     optional_params = ["job_type", "handler_group", "max_force_threshold", "scratch_dir",
                        "gzip_output", "max_errors", "ediffg", "auto_npar", "gamma_vasp_cmd",
-                       "wall_time","half_kpts_first_relax"]
+                       "wall_time", "half_kpts_first_relax"]
 
     def run_task(self, fw_spec):
 
         handler_groups = {
             "default": [VaspErrorHandler(), MeshSymmetryErrorHandler(), UnconvergedErrorHandler(),
-                        NonConvergingErrorHandler(),PotimErrorHandler(),
+                        NonConvergingErrorHandler(), PotimErrorHandler(),
                         PositiveEnergyErrorHandler(), FrozenJobErrorHandler(), StdErrHandler(),
                         DriftErrorHandler()],
             "strict": [VaspErrorHandler(), MeshSymmetryErrorHandler(), UnconvergedErrorHandler(),
-                       NonConvergingErrorHandler(),PotimErrorHandler(),
+                       NonConvergingErrorHandler(), PotimErrorHandler(),
                        PositiveEnergyErrorHandler(), FrozenJobErrorHandler(),
                        StdErrHandler(), AliasingErrorHandler(), DriftErrorHandler()],
             "md": [VaspErrorHandler(), NonConvergingErrorHandler()],
             "no_handler": []
-            }
+        }
 
         vasp_cmd = env_chk(self["vasp_cmd"], fw_spec)
 
@@ -123,22 +125,25 @@ class RunVaspCustodian(FiretaskBase):
         scratch_dir = env_chk(self.get("scratch_dir"), fw_spec)
         gzip_output = self.get("gzip_output", True)
         max_errors = self.get("max_errors", CUSTODIAN_MAX_ERRORS)
-        auto_npar = env_chk(self.get("auto_npar"), fw_spec, strict=False, default=False)
-        gamma_vasp_cmd = env_chk(self.get("gamma_vasp_cmd"), fw_spec, strict=False, default=None)
+        auto_npar = env_chk(self.get("auto_npar"), fw_spec,
+                            strict=False, default=False)
+        gamma_vasp_cmd = env_chk(
+            self.get("gamma_vasp_cmd"), fw_spec, strict=False, default=None)
         if gamma_vasp_cmd:
             gamma_vasp_cmd = shlex.split(gamma_vasp_cmd)
 
         # construct jobs
         if job_type == "normal":
-            jobs = [VaspJob(vasp_cmd, auto_npar=auto_npar, gamma_vasp_cmd=gamma_vasp_cmd)]
+            jobs = [VaspJob(vasp_cmd, auto_npar=auto_npar,
+                            gamma_vasp_cmd=gamma_vasp_cmd)]
         elif job_type == "double_relaxation_run":
             jobs = VaspJob.double_relaxation_run(vasp_cmd, auto_npar=auto_npar,
                                                  ediffg=self.get("ediffg"),
                                                  half_kpts_first_relax=self.get("half_kpts_first_relax", HALF_KPOINTS_FIRST_RELAX))
         elif job_type == "metagga_opt_run":
             jobs = VaspJob.metagga_opt_run(vasp_cmd, auto_npar=auto_npar,
-                                                 ediffg=self.get("ediffg"),
-                                                 half_kpts_first_relax=self.get("half_kpts_first_relax", HALF_KPOINTS_FIRST_RELAX))
+                                           ediffg=self.get("ediffg"),
+                                           half_kpts_first_relax=self.get("half_kpts_first_relax", HALF_KPOINTS_FIRST_RELAX))
 
         elif job_type == "full_opt_run":
             jobs = VaspJob.full_opt_run(vasp_cmd, auto_npar=auto_npar,
@@ -189,7 +194,8 @@ class RunVaspCustodian(FiretaskBase):
             handlers = handler_group
 
         if self.get("max_force_threshold"):
-            handlers.append(MaxForceErrorHandler(max_force_threshold=self["max_force_threshold"]))
+            handlers.append(MaxForceErrorHandler(
+                max_force_threshold=self["max_force_threshold"]))
 
         if self.get("wall_time"):
             handlers.append(WalltimeHandler(wall_time=self["wall_time"]))
@@ -205,7 +211,8 @@ class RunVaspCustodian(FiretaskBase):
         c.run()
 
         if os.path.exists(zpath("custodian.json")):
-            stored_custodian_data = {"custodian": loadfn(zpath("custodian.json"))}
+            stored_custodian_data = {
+                "custodian": loadfn(zpath("custodian.json"))}
             return FWAction(stored_data=stored_custodian_data)
 
 
@@ -234,7 +241,8 @@ class RunBoltztrap(FiretaskBase):
         doping = self.get("doping", None)
         soc = self.get("soc", False)
 
-        vasprun, outcar = get_vasprun_outcar(".", parse_dos=True, parse_eigen=True)
+        vasprun, outcar = get_vasprun_outcar(
+            ".", parse_dos=True, parse_eigen=True)
         bs = vasprun.get_band_structure()
         nelect = outcar.nelect
         runner = BoltztrapRunner(bs, nelect, scissor=scissor, doping=doping, tmax=tmax,
@@ -270,7 +278,8 @@ class RunVaspFake(FiretaskBase):
          check_potcar (bool): whether to confirm the POTCAR params (default: True)
      """
     required_params = ["ref_dir"]
-    optional_params = ["params_to_check", "check_incar", "check_kpoints", "check_poscar", "check_potcar"]
+    optional_params = ["params_to_check", "check_incar",
+                       "check_kpoints", "check_poscar", "check_potcar"]
 
     def run_task(self, fw_spec):
         self._verify_inputs()
@@ -284,26 +293,31 @@ class RunVaspFake(FiretaskBase):
 
         # Check INCAR
         if self.get("check_incar", True):
-            ref_incar = Incar.from_file(os.path.join(self["ref_dir"], "inputs", "INCAR"))
+            ref_incar = Incar.from_file(os.path.join(
+                self["ref_dir"], "inputs", "INCAR"))
             params_to_check = self.get("params_to_check", [])
             defaults = {"ISPIN": 1, "ISMEAR": 1, "SIGMA": 0.2}
             for p in params_to_check:
                 if user_incar.get(p, defaults.get(p)) != ref_incar.get(p, defaults.get(p)):
-                    raise ValueError("INCAR value of {} is inconsistent!".format(p))
+                    raise ValueError(
+                        "INCAR value of {} is inconsistent!".format(p))
 
         # Check KPOINTS
         if self.get("check_kpoints", True):
-            user_kpoints = Kpoints.from_file(os.path.join(os.getcwd(), "KPOINTS"))
-            ref_kpoints = Kpoints.from_file(os.path.join(self["ref_dir"], "inputs", "KPOINTS"))
+            user_kpoints = Kpoints.from_file(
+                os.path.join(os.getcwd(), "KPOINTS"))
+            ref_kpoints = Kpoints.from_file(
+                os.path.join(self["ref_dir"], "inputs", "KPOINTS"))
             if user_kpoints.style != ref_kpoints.style or \
-                            user_kpoints.num_kpts != ref_kpoints.num_kpts:
+                    user_kpoints.num_kpts != ref_kpoints.num_kpts:
                 raise ValueError("KPOINT files are inconsistent! Paths are:\n{}\n{} with kpoints {} and {}".format(
                     os.getcwd(), os.path.join(self["ref_dir"], "inputs"), user_kpoints, ref_kpoints))
 
         # Check POSCAR
         if self.get("check_poscar", True):
             user_poscar = Poscar.from_file(os.path.join(os.getcwd(), "POSCAR"))
-            ref_poscar = Poscar.from_file(os.path.join(self["ref_dir"], "inputs", "POSCAR"))
+            ref_poscar = Poscar.from_file(os.path.join(
+                self["ref_dir"], "inputs", "POSCAR"))
             if user_poscar.natoms != ref_poscar.natoms or user_poscar.site_symbols != \
                     ref_poscar.site_symbols:
                 raise ValueError("POSCAR files are inconsistent! Paths are:\n{}\n{}".format(
@@ -312,7 +326,8 @@ class RunVaspFake(FiretaskBase):
         # Check POTCAR
         if self.get("check_potcar", True):
             user_potcar = Potcar.from_file(os.path.join(os.getcwd(), "POTCAR"))
-            ref_potcar = Potcar.from_file(os.path.join(self["ref_dir"], "inputs", "POTCAR"))
+            ref_potcar = Potcar.from_file(os.path.join(
+                self["ref_dir"], "inputs", "POTCAR"))
             if user_potcar.symbols != ref_potcar.symbols:
                 raise ValueError("POTCAR files are inconsistent! Paths are:\n{}\n{}".format(
                     os.getcwd(), os.path.join(self["ref_dir"], "inputs")))
@@ -333,3 +348,16 @@ class RunVaspFake(FiretaskBase):
             if os.path.isfile(full_file_name):
                 shutil.copy(full_file_name, os.getcwd())
         logger.info("RunVaspFake: ran fake VASP, generated outputs")
+
+@explicit_serialize
+class RunVasp2Trace(FiretaskBase):
+    """
+    Execute vasp2trace in current directory.
+
+    """
+
+    def run_task(self, fw_spec):
+
+        data = Vasp2TraceCaller(os.getcwd())
+
+        return FWAction(update_spec={"vasp2trace_out": data.as_dict()})
